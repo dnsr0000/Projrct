@@ -245,6 +245,18 @@
     if (!el) return;
     el.style.display = el.style.display === 'none' ? '' : 'none';
   }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('highlight_order');
+    if (id) {
+      const detail = document.getElementById('orderDetail' + id);
+      if (detail) {
+        detail.style.display = '';
+        detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
 </script>
 </body>
 </html>

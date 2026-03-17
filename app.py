@@ -238,7 +238,7 @@ def admin_update_order(order_id):
     order.payment_method = request.form.get('payment_method', order.payment_method)
     order.status = request.form.get('status', order.status)
     db.session.commit()
-    return redirect(url_for('admin_index'))
+    return redirect(url_for('admin_index', highlight_order=order.id))
 
 @app.route('/admin/export_orders')
 def export_orders():
