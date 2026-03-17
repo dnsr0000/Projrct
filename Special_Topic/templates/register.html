@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>加入會員</title>
+</head>
+<body>
+    <h2>填寫基本資料與照片</h2>
+    <form action="/register" method="POST" enctype="multipart/form-data">
+        <label>姓名 (Name):</label><br>
+        <input type="text" name="name" value="{{ name }}" required><br><br>
+        
+        <label>電話 (Phone):</label><br>
+        <input type="text" name="phone" value="{{ phone }}" required><br><br>
+        
+        <label>臉部照片 (Photo):</label><br>
+        <input type="file" name="photo" accept="image/*"><br><br>
+
+        <input type="hidden" name="captured_photo" value="{{ captured_photo }}">
+
+        {% if captured_photo %}
+        <div style="margin-bottom: 20px; padding: 10px; border: 2px dashed #4CAF50; width: 300px;">
+            <p style="color: green; font-weight: bold;">✅ 已成功擷取臉部影像！</p>
+            <img src="{{ url_for('static', filename='uploads/' + captured_photo) }}" alt="預覽照片" width="100%" style="border-radius: 5px;">
+            <p style="font-size: 14px; color: gray;">請點擊下方「上傳照片並註冊」完成最後步驟。</p>
+        </div>
+        {% endif %}
+        
+        <hr style="width: 300px; margin-left: 0;">
+        
+        <button type="submit" name="action" value="webcam" formnovalidate style="background-color: #2196F3; color: white; padding: 10px; border: none; cursor: pointer; border-radius: 5px; margin-bottom: 10px;">
+            📸 開啟相機 (自動拍攝臉部)
+        </button>
+        <br>
+        
+        <button type="submit" name="action" value="register" style="background-color: #4CAF50; color: white; padding: 10px; border: none; cursor: pointer; border-radius: 5px;">
+            💾 上傳照片並註冊 (輸入資料庫)
+        </button>
+    </form>
+    
+    <br><br>
+    <a href="/">返回首頁</a>
+</body>
+</html>

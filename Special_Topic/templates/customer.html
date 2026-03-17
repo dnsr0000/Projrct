@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>自助點餐系統</title>
+</head>
+<body>
+    <h1>歡迎光臨！</h1>
+
+    {% if session.get('user_name') %}
+        
+        <h2>您好，{{ session['user_name'] }}！開始點餐吧！</h2>
+        <a href="/logout"><button style="background-color: #f44336; color: white; padding: 5px 10px; border: none; cursor: pointer; border-radius: 5px;">登出 / 取消點餐</button></a>
+
+        <hr>
+
+        <h2>今日菜單</h2>
+        <ul>
+            {% for item in items %}
+                <li>
+                    <strong>{{ item.name }}</strong> - ${{ item.price }} <br>
+                    <small>{{ item.description }}</small>
+                </li>
+            {% else %}
+                <li>目前沒有菜單喔！</li>
+            {% endfor %}
+        </ul>
+
+        <h2>結帳區</h2>
+        <form action="/checkout" method="POST">
+            <label>輸入總金額 (測試用):</label>
+            <input type="number" name="total_price" required><br><br>
+            
+            <label>優惠代碼 (Coupon):</label>
+            <input type="text" name="coupon_code" placeholder="如: WELCOME50"><br><br>
+            
+            <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px; border: none; cursor: pointer; border-radius: 5px;">確認結帳</button>
+        </form>
+
+    {% else %}
+
+        <div style="margin-top: 50px;">
+            <a href="/register"><button style="padding: 15px 30px; font-size: 18px; cursor: pointer; margin-right: 10px;">還不是會員？加入會員</button></a>
+            <a href="/face_login"><button style="padding: 15px 30px; font-size: 18px; background-color: #2196F3; color: white; border: none; cursor: pointer; border-radius: 5px;">人臉快速登入 (Face Login)</button></a>
+        </div>
+        
+    {% endif %}
+
+</body>
+</html>

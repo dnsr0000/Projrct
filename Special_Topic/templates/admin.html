@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>店家管理系統</title>
+</head>
+<body>
+    <h1>菜單管理</h1>
+    
+    <h2>新增菜單</h2>
+    <form action="/admin/add" method="POST">
+        <input type="text" name="name" placeholder="餐點名稱" required>
+        <input type="number" name="price" placeholder="價格" required>
+        <input type="text" name="description" placeholder="描述">
+        <button type="submit">新增</button>
+    </form>
+
+    <h2>目前菜單</h2>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>名稱</th>
+            <th>價格</th>
+            <th>描述</th>
+            <th>操作</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.price }}</td>
+            <td>{{ item.description }}</td>
+            <td>
+                <a href="/admin/delete/{{ item.id }}"><button>刪除</button></a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+    <a href="/">查看客人點餐畫面</a>
+</body>
+</html>
