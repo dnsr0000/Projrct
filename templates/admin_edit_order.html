@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>編輯訂單 #{{ order.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>編輯訂單 #{{ order.id }}</h3>
+        <a class="btn btn-secondary" href="/admin">← 回到後台</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="POST" action="/admin/update_order/{{ order.id }}">
+                <div class="mb-3 row">
+                    <label class="col-sm-2 col-form-label">顧客</label>
+                    <div class="col-sm-10">
+                        <input class="form-control" value="{{ order.table_number or '訪客' }}" disabled>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label class="col-sm-2 col-form-label">付款方式</label>
+                    <div class="col-sm-10">
+                        <select name="payment_method" class="form-select">
+                            <option value="Cash" {% if order.payment_method == 'Cash' %}selected{% endif %}>現金 Cash</option>
+                            <option value="Credit Card" {% if order.payment_method == 'Credit Card' %}selected{% endif %}>信用卡 Credit Card</option>
+                            <option value="Line Pay" {% if order.payment_method == 'Line Pay' %}selected{% endif %}>Line Pay</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label class="col-sm-2 col-form-label">狀態</label>
+                    <div class="col-sm-10">
+                        <select name="status" class="form-select">
+                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>Completed</option>
+                            <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h5 class="mt-4">訂單品項</h5>
+                <div id="itemsList" class="mb-3">
+                    {% for item in order.items %}
+                    <div class="row g-2 mb-2 item-row">
+                        <div class="col-md-5"><input type="text" name="item_name" class="form-control" value="{{ item.item_name }}" required></div>
+                        <div class="col-md-2"><input type="number" name="quantity" class="form-control" min="1" value="{{ item.quantity }}" required></div>
+                        <div class="col-md-3"><input type="number" name="price" class="form-control" min="0" value="{{ item.price }}" required></div>
+                        <div class="col-md-2"><button type="button" class="btn btn-danger w-100" onclick="removeRow(this)">刪除</button></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="addRow()">+ 新增品項</button>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-success">儲存訂單</button>
+                    <a href="/admin" class="btn btn-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function addRow() {
+    const container = document.getElementById('itemsList');
+    const html = `<div class="row g-2 mb-2 item-row"><div class="col-md-5"><input type="text" name="item_name" class="form-control" placeholder="品項名稱" required></div><div class="col-md-2"><input type="number" name="quantity" class="form-control" min="1" value="1" required></div><div class="col-md-3"><input type="number" name="price" class="form-control" min="0" value="0" required></div><div class="col-md-2"><button type="button" class="btn btn-danger w-100" onclick="removeRow(this)">刪除</button></div></div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+function removeRow(btn) { btn.closest('.item-row').remove(); }
+</script>
+</body>
+</html>

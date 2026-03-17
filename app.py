@@ -204,6 +204,42 @@ def update_order_status(order_id):
     db.session.commit()
     return redirect(url_for('admin_index'))
 
+@app.route('/admin/edit_order/<int:order_id>')
+def admin_edit_order(order_id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_index'))
+    order = Order.query.get_or_404(order_id)
+    return render_template('admin_edit_order.html', order=order)
+
+@app.route('/admin/update_order/<int:order_id>', methods=['POST'])
+def admin_update_order(order_id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_index'))
+    order = Order.query.get_or_404(order_id)
+    item_names = request.form.getlist('item_name')
+    quantities = request.form.getlist('quantity')
+    prices = request.form.getlist('price')
+    new_items = []
+    total = 0
+    for name, qty, price in zip(item_names, quantities, prices):
+        if not name.strip():
+            continue
+        q = int(qty or 0)
+        p = int(price or 0)
+        if q <= 0 or p < 0:
+            continue
+        new_items.append((name.strip(), q, p))
+        total += q * p
+
+    # 刪除舊明細，重建新明細
+    OrderItem.query.filter_by(order_id=order.id).delete()
+    for name, q, p in new_items:
+        db.session.add(OrderItem(order_id=order.id, item_name=name, quantity=q, price=p))
+
+    order.total_price = total
+    order.payment_method = request.form.get('payment_method', order.payment_method)
+    order.status = request.form.get('status', order.status)
+    db.session.commit()
+    return redirect(url_for('admin_index'))
+
 @app.route('/admin/export_orders')
 def export_orders():
     if not session.get('admin_logged_in'):
