@@ -31,7 +31,7 @@ Project Root/
 
 💻 安裝與執行環境 (Environment & Setup)
 1. 作業系統：Windows 11 (已於 25H2 環境測試通過)
-2. Python 版本：Python 3.8+ 
+2. Python  版本：Python 3.8+ 
 3. 安裝必備套件 (Dependencies):
    打開終端機 (Terminal) 執行以下指令：
    pip install flask flask-sqlalchemy opencv-python numpy werkzeug
