@@ -2,7 +2,7 @@ import time
 import os
 import cv2
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -11,36 +11,32 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = 'kiosk_secret_key_123'
 
-# --- 1. 取得絕對路徑與基本設定 ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, 'menu.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ================= 新增：分類上傳資料夾 =================
 menu_path = os.path.join(BASE_DIR, 'static', 'menu')
 member_path = os.path.join(BASE_DIR, 'static', 'member')
 app.config['UPLOAD_FOLDER_MENU'] = menu_path
 app.config['UPLOAD_FOLDER_MEMBER'] = member_path
 
-# 確保兩個資料夾都存在
 os.makedirs(app.config['UPLOAD_FOLDER_MENU'], exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER_MEMBER'], exist_ok=True)
-# =======================================================
 
 db = SQLAlchemy(app)
 
-# --- 2. 載入模型 ---
 yunet_path = os.path.join(BASE_DIR, "face_detection_yunet_2023mar.onnx")
 sface_path = os.path.join(BASE_DIR, "face_recognition_sface_2021dec.onnx")
 
 detector = cv2.FaceDetectorYN.create(yunet_path, "", (320, 320))
 recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
 
-# --- 3. 資料庫模型 ---
+# --- 資料庫模型 ---
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=False, default='主餐') # 新增：餐點分類
     price = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(200))
     image_path = db.Column(db.String(200), nullable=True)
@@ -54,10 +50,12 @@ class User(db.Model):
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     table_number = db.Column(db.String(50))
+    order_type = db.Column(db.String(20), nullable=False, default='內用') # 新增：內用或外帶
     total_price = db.Column(db.Integer, nullable=False)
     payment_method = db.Column(db.String(50))
     status = db.Column(db.String(20), default='Pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # 自動將系統時間調整為台灣時區 (+8小時)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=8))
     items = db.relationship('OrderItem', backref='order', lazy=True)
 
 class OrderItem(db.Model):
@@ -70,7 +68,6 @@ class OrderItem(db.Model):
 with app.app_context():
     db.create_all()
 
-# --- 輔助函數 ---
 def get_face_feature(image_path):
     img = cv2.imread(image_path)
     if img is None: return None
@@ -80,7 +77,7 @@ def get_face_feature(image_path):
     face_align = recognizer.alignCrop(img, faces[0])
     return recognizer.feature(face_align)
 
-# --- 店家後台管理 (整合登入與管理畫面) ---
+# --- 店家後台管理 (新增 Order 查詢) ---
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_index():
     if request.method == 'POST':
@@ -97,19 +94,40 @@ def admin_index():
         
     items = MenuItem.query.all()
     users = User.query.all()
-    return render_template('admin.html', items=items, users=users)
+    # 新增：抓取所有歷史訂單，並按時間倒序排列 (最新訂單在最上面)
+    orders = Order.query.order_by(Order.created_at.desc()).all()
+    return render_template('admin.html', items=items, users=users, orders=orders)
+
+
+# --- 店家修改訂單狀態 (API) ---
+@app.route('/admin/update_order_status/<int:order_id>', methods=['POST'])
+def update_order_status(order_id):
+    if not session.get('admin_logged_in'): 
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.json
+    new_status = data.get('status')
+    
+    order = Order.query.get_or_404(order_id)
+    if new_status:
+        order.status = new_status
+        db.session.commit()
+        return jsonify({'message': '狀態更新成功', 'status': new_status})
+        
+    return jsonify({'error': '無效的狀態'}), 400
+
 
 @app.route('/admin_logout')
 def admin_logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('customer_index'))
 
-# --- 新增菜單 (儲存至 menu 資料夾) ---
 @app.route('/admin/add', methods=['POST'])
 def add_item():
     if not session.get('admin_logged_in'): return redirect(url_for('admin_index'))
     
     name = request.form.get('name')
+    category = request.form.get('category', '主餐') # 接收分類資料
     price = request.form.get('price')
     desc = request.form.get('description')
     image = request.files.get('image')
@@ -119,59 +137,52 @@ def add_item():
         if image and image.filename != '':
             ext = os.path.splitext(image.filename)[1] or '.jpg'
             image_filename = f"menu_{int(time.time())}{ext}"
-            # 路徑改為 UPLOAD_FOLDER_MENU
             filepath = os.path.join(app.config['UPLOAD_FOLDER_MENU'], image_filename)
             image.save(filepath)
             
-        new_item = MenuItem(name=name, price=int(price), description=desc, image_path=image_filename)
+        new_item = MenuItem(name=name, category=category, price=int(price), description=desc, image_path=image_filename)
         db.session.add(new_item)
         db.session.commit()
         
     return redirect(url_for('admin_index'))
 
-# --- 刪除菜單 (從 menu 資料夾刪除) ---
 @app.route('/admin/delete/<int:id>')
 def delete_item(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_index'))
     item_to_delete = MenuItem.query.get_or_404(id)
     
     if item_to_delete.image_path:
-        # 路徑改為 UPLOAD_FOLDER_MENU
         filepath = os.path.join(app.config['UPLOAD_FOLDER_MENU'], item_to_delete.image_path)
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
         except Exception as e:
-            print(f"刪除餐點照片失敗: {e}")
+            pass
             
     db.session.delete(item_to_delete)
     db.session.commit()
     return redirect(url_for('admin_index'))
 
-# --- 刪除會員並銷毀照片 ---
 @app.route('/admin/delete_user/<int:id>')
 def delete_user(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_index'))
     user_to_delete = User.query.get_or_404(id)
     
     try:
-        # photo_path 本來就是存絕對路徑，所以直接刪除即可
         if os.path.exists(user_to_delete.photo_path):
             os.remove(user_to_delete.photo_path)
     except Exception as e:
-        print(f"刪除照片失敗: {e}")
+        pass
         
     db.session.delete(user_to_delete)
     db.session.commit()
     return redirect(url_for('admin_index'))
 
-# --- 客戶首頁 ---
 @app.route('/')
 def customer_index():
     items = MenuItem.query.all()
     return render_template('customer.html', items=items)
 
-# --- 結帳與登出 ---
 @app.route('/logout')
 def logout():
     session.pop('user_name', None)
@@ -184,12 +195,14 @@ def submit_order():
     
     new_order = Order(
         table_number=user_name,
+        order_type=data.get('order_type', '內用'),
         total_price=data['total_price'],
         payment_method=data.get('payment_method', 'Cash')
     )
     db.session.add(new_order)
     db.session.flush()
 
+    order_items_detail = [] # 用來回傳給前端顯示明細
     for item in data['items']:
         order_item = OrderItem(
             order_id=new_order.id,
@@ -198,13 +211,67 @@ def submit_order():
             price=item['price']
         )
         db.session.add(order_item)
+        
+        # 整理明細資料
+        order_items_detail.append({
+            'name': item['name'],
+            'quantity': item['quantity'],
+            'price': item['price'],
+            'subtotal': item['price'] * item['quantity']
+        })
 
     db.session.commit()
-    session.pop('user_name', None)
     
-    return jsonify({'message': f'訂單已成功送出！感謝 {user_name} 的光臨。', 'order_id': new_order.id})
+    # ⚠️ 關鍵點：不要 pop session，保持登入狀態！
+    # 回傳詳細的訂單明細給前端彈窗使用
+    return jsonify({
+        'message': '訂單已成功送出！',
+        'order_id': new_order.id,
+        'user_name': user_name,
+        'order_type': new_order.order_type,
+        'payment_method': new_order.payment_method,
+        'total_price': new_order.total_price,
+        'items': order_items_detail
+    })
 
-# --- 會員註冊 (儲存至 member 資料夾) ---
+# --- 取得當前會員的歷史訂單記錄 (API) ---
+@app.route('/my_orders')
+def my_orders():
+    user_name = session.get('user_name')
+    if not user_name:
+        return jsonify({'error': '未登入'}), 401
+
+    try:
+        # 嚴格精準查詢：只撈取 table_number 完全等於當前 Session 會員姓名的訂單
+        orders = Order.query.filter_by(table_number=user_name).order_by(Order.created_at.desc()).all()
+
+        result = []
+        for o in orders:
+            items_detail = []
+            for item in o.items:
+                items_detail.append({
+                    'name': item.item_name,
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'subtotal': item.price * item.quantity
+                })
+                
+            result.append({
+                'order_id': o.id,
+                'user_name': o.table_number,
+                'order_type': getattr(o, 'order_type', '內用'),
+                'payment_method': o.payment_method,
+                'total_price': o.total_price,
+                'status': o.status,
+                'created_at': o.created_at.strftime('%Y-%m-%d %H:%M:%S') if o.created_at else '',
+                'items': items_detail
+            })
+            
+        return jsonify(result)
+    except Exception as e:
+        print(f"取得訂單記錄失敗: {e}")
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -222,7 +289,6 @@ def register():
             cv2.namedWindow(win_name)
             
             temp_filename = f"temp_{phone}_{int(time.time())}.jpg"
-            # 路徑改為 UPLOAD_FOLDER_MEMBER
             temp_filepath = os.path.join(app.config['UPLOAD_FOLDER_MEMBER'], temp_filename)
             success_capture = False
 
@@ -263,11 +329,9 @@ def register():
             
             if photo and photo.filename != '':
                 ext = os.path.splitext(photo.filename)[1] or '.jpg'
-                # 路徑改為 UPLOAD_FOLDER_MEMBER
                 source_path = os.path.join(app.config['UPLOAD_FOLDER_MEMBER'], f"temp_upload_{phone}{ext}")
                 photo.save(source_path)
             elif captured_photo:
-                # 路徑改為 UPLOAD_FOLDER_MEMBER
                 source_path = os.path.join(app.config['UPLOAD_FOLDER_MEMBER'], captured_photo)
                 if not os.path.exists(source_path):
                     return "<h1>找不到拍攝的照片，請重新操作！</h1><a href='/register'>返回</a>", 400
@@ -291,7 +355,6 @@ def register():
 
             ext = os.path.splitext(source_path)[1]
             final_filename = f"member_{new_user.id}_{phone}{ext}"
-            # 路徑改為 UPLOAD_FOLDER_MEMBER
             final_filepath = os.path.join(app.config['UPLOAD_FOLDER_MEMBER'], final_filename)
             
             os.rename(source_path, final_filepath)
@@ -303,7 +366,6 @@ def register():
 
     return render_template('register.html', name='', phone='', captured_photo='')
 
-# --- 人臉登入 ---
 @app.route('/face_login')
 def face_login():
     users = User.query.all()
