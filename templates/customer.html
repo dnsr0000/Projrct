@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>自助點餐系統 (Kiosk)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background: linear-gradient(150deg, #101010 0%, #1f1f1f 100%); color: #f8f9fa; }
+        .header { background: rgba(10,10,10,0.88); backdrop-filter: blur(3px); border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .menu-card { background: #1a1a1a; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; transition: transform .15s ease; }
+        .menu-card:hover { transform: translateY(-2px); border-color: #ffbf00; }
+        .menu-img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; border: 2px solid #343434; }
+        .add-to-cart-btn { background-color: #f5a500; border: none; }
+        .add-to-cart-btn:hover { background-color: #ffc964; }
+        .btn-login { background-color: #2d9cdb; color: white; }
+        .btn-register { background-color: #28a745; color: white; }
+        .hero { min-height: 58vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(0,0,0,0.65), rgba(10,10,10,0.95)), url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=80') center/cover; border-radius: 18px; margin-bottom: 25px; }
+        .hero h1 { letter-spacing: 1px; }
+        .badge-pill { border-radius: 50px; }
+    </style>
+</head>
+<body>
+
+{% if session.get('user_name') %}
+
+<header class="header fixed-top py-2">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-shop-window text-warning fs-3"></i>
+            <div>
+                <div class="h5 mb-0 text-white">Restaurantly 自助點餐</div>
+                <small class="text-muted">歡迎回來，{{ session['user_name'] }}！</small>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#cart-sidebar"><i class="bi bi-cart3"></i> 購物車 <span id="cart-count" class="badge bg-danger">0</span></button>
+            <a href="/logout" class="btn btn-danger">登出</a>
+        </div>
+    </div>
+</header>
+
+<main style="padding-top: 90px;">
+    <div class="container">
+        <div class="hero text-white text-center p-4 mb-4">
+            <div>
+                <h1 class="display-6">快速點餐，輕鬆結帳</h1>
+                <p class="lead">現在可直接加入購物車並在右側快速結帳。</p>
+            </div>
+        </div>
+
+        {% set hot_items = items|selectattr('is_recommended')|list %}
+        {% if hot_items %}
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">🔥 熱門推薦</h5>
+                <small class="text-muted">我們為你挑選的招牌</small>
+            </div>
+            <div class="row gy-2">
+                {% for item in hot_items %}
+                <div class="col-sm-4">
+                    <div class="p-2 rounded" style="background:#1d1d1d; border:1px solid rgba(255,255,255,0.1);">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div><strong>{{ item.name }}</strong><div class="text-warning">${{ item.price }}</div></div>
+                            <span class="badge bg-danger">熱門</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mb-3">
+            <div class="col-md-4 mb-2">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input id="searchInput" type="text" class="form-control" placeholder="搜尋餐點名稱..." oninput="filterMenu()">
+                </div>
+            </div>
+            <div class="col-md-3 mb-2">
+                <select id="categoryFilter" class="form-select" onchange="filterMenu()">
+                    <option value="all">所有分類</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <div class="input-group">
+                    <span class="input-group-text">最高價格</span>
+                    <input id="maxPrice" type="number" class="form-control" min="0" placeholder="不限" oninput="filterMenu()">
+                </div>
+            </div>
+            <div class="col-md-2 d-flex justify-content-end mb-2">
+                <button class="btn btn-outline-light" onclick="resetFilters()"><i class="bi bi-arrow-counterclockwise"></i> 清除</button>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-sm btn-light" onclick="sortMenu('recommended')">🔥 熱門優先</button>
+            <button class="btn btn-sm btn-light" onclick="sortMenu('new')">🆕 新品優先</button>
+            <button class="btn btn-sm btn-light" onclick="sortMenu('price_asc')">價格↑</button>
+            <button class="btn btn-sm btn-light" onclick="sortMenu('price_desc')">價格↓</button>
+        </div>
+        <div id="menuList" class="row gy-3">
+            {% for item in items %}
+            <div class="col-md-6 menu-row" data-category="{{ item.category or '未分類' }}" data-price="{{ item.price }}" data-recommended="{{ 1 if item.is_recommended else 0 }}" data-new="{{ 1 if item.is_new else 0 }}">
+                <div class="menu-card p-3">
+                    <div class="d-flex align-items-start gap-3">
+                        {% if item.image_path %}
+                        <img src="{{ url_for('static', filename='menu/' + item.image_path) }}" class="menu-img" alt="{{ item.name }}">
+                        {% else %}
+                        <div class="menu-img d-flex align-items-center justify-content-center bg-secondary text-white">無圖</div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="mb-1 text-warning">{{ item.name }}</h5>
+                                    <small class="badge bg-secondary">{{ item.category or '未分類' }}</small>
+                                    {% if item.is_recommended %}<span class="badge bg-danger">熱門推薦</span>{% endif %}                                    {% if item.is_new %}<span class="badge bg-info">新品</span>{% endif %}                                </div>
+                                <h5 class="text-success">${{ item.price }}</h5>
+                            </div>
+                            <p class="mb-2 text-muted">{{ item.description or '無描述' }}</p>
+                            <button class="btn add-to-cart-btn btn-sm" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }})"><i class="bi bi-cart-plus"></i> 加入購物車</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center text-white-50">
+                目前尚無菜單，請店家新增菜品。
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="cart-sidebar" aria-labelledby="cartLabel">
+    <div class="offcanvas-header">
+        <h5 id="cartLabel">你的購物車</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+        <div id="cart-items" class="flex-grow-1 overflow-auto mb-3">
+            <div class="text-center text-muted">購物車目前空空如也</div>
+        </div>
+        <div class="border-top pt-3">
+            <div class="d-flex justify-content-between mb-2"><span class="fw-bold">總計</span><span class="fw-bold text-danger">$<span id="cart-total">0.00</span></span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="fw-bold">會員折扣</span><span class="text-success">$<span id="cart-discount">0.00</span></span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="fw-bold">應付金額</span><span class="fw-bold text-warning">$<span id="cart-final">0.00</span></span></div>
+            <div class="mb-2 small text-muted">會員點數：{{ user_points if is_member else 0 }} 點</div>
+            <div class="mb-3" id="pointsSection" style="display: {{ 'block' if is_member and points_redemption_enabled else 'none' }};">
+                <label class="form-label">使用點數折抵（每 {{ points_to_cash }} 點折抵 1 元）</label>
+                <input id="usePoints" type="number" min="0" value="0" class="form-control form-control-sm" placeholder="輸入要使用的點數" oninput="updateCartUI()">
+                <div class="form-text">可使用點數：{{ user_points }} 點</div>
+            </div>
+            {% if is_member and not points_earning_enabled %}
+            <div class="alert alert-warning py-1 mt-0 mb-3 small">目前已關閉點數獲得，結帳不會累積新點數。</div>
+            {% endif %}
+            <div class="mb-3">
+                <label class="form-label">付款方式</label>
+                <select id="paymentMethod" class="form-select">
+                    <option value="Cash">現金 Cash</option>
+                    <option value="Credit Card">信用卡 Credit Card</option>
+                    <option value="Line Pay">Line Pay</option>
+                </select>
+            </div>
+            <button class="btn btn-warning w-100" onclick="openPreview()">✅ 下單前確認</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header">
+        <h5 class="modal-title">訂單確認</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="preview-items"></div>
+        <div class="mt-3 text-end">
+          <div>總計: $<span id="preview-subtotal">0.00</span></div>
+          <div>折扣: $<span id="preview-discount">0.00</span></div>
+          <div class="fw-bold">應付: $<span id="preview-final">0.00</span></div>
+          <div class="text-muted" id="preview-note"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button class="btn btn-success" onclick="confirmCheckout()">確認送出訂單</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 前端購物車資料結構
+    let cart = [];
+    let menuRows = [...document.querySelectorAll('.menu-row')];
+
+    // 會員折扣判斷
+    const isMember = {{ 'true' if is_member else 'false' }};
+    const pointsRedemptionEnabled = {{ 'true' if points_redemption_enabled else 'false' }};
+    const pointsEarningEnabled = {{ 'true' if points_earning_enabled else 'false' }};
+    const memberDiscountRate = 0;
+
+    function addToCart(id, name, price) {
+        const item = cart.find(i => i.id === id);
+        if (item) item.quantity += 1;
+        else cart.push({id, name, price, quantity: 1});
+        updateCartUI();
+        const toastEl = document.createElement('div');
+        toastEl.className = 'position-fixed bottom-0 end-0 m-3 bg-success text-white p-2 rounded shadow';
+        toastEl.innerHTML = `已加入：${name} <span class="fw-bold">+1</span>`;
+        document.body.appendChild(toastEl);
+        setTimeout(() => toastEl.remove(), 1300);
+    }
+
+    function updateCartUI() {
+        const container = document.getElementById('cart-items');
+        const count = document.getElementById('cart-count');
+        const totalEl = document.getElementById('cart-total');
+        const discountEl = document.getElementById('cart-discount');
+        const finalEl = document.getElementById('cart-final');
+        const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        const discount = isMember ? total * memberDiscountRate : 0;
+        const usePoints = Number(document.getElementById('usePoints')?.value || 0);
+        const pointsToCash = Number({{ points_to_cash }});
+        const pointsDiscount = isMember && pointsRedemptionEnabled && usePoints > 0 ? Math.floor(usePoints / pointsToCash) : 0;
+        const final = Math.max(0, total - discount - pointsDiscount);
+        count.innerText = cart.reduce((acc, i) => acc + i.quantity, 0);
+        if (!cart.length) {
+            container.innerHTML = '<div class="text-center text-muted">購物車目前空空如也</div>';
+            totalEl.innerText = '0.00';
+            discountEl.innerText = '0.00';
+            finalEl.innerText = '0.00';
+            return;
+        }
+        container.innerHTML = cart.map((item, idx) => `
+            <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+                <div>
+                    <div class="fw-bold">${item.name}</div>
+                    <small class="text-muted">$${item.price.toFixed(2)} x ${item.quantity}</small>
+                </div>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-secondary" onclick="changeQty(${idx}, -1)">-</button>
+                    <button class="btn btn-outline-secondary" onclick="changeQty(${idx}, 1)">+</button>
+                </div>
+            </div>
+        `).join('');
+        totalEl.innerText = total.toFixed(2);
+        discountEl.innerText = (discount + pointsDiscount).toFixed(2);
+        finalEl.innerText = final.toFixed(2);
+    }
+
+    function changeQty(index, delta) {
+        cart[index].quantity += delta;
+        if (cart[index].quantity <= 0) cart.splice(index,1);
+        updateCartUI();
+    }
+
+    function openPreview() {
+        // 顯示結帳預覽 modal（品項、小計、折扣、應付）
+        if (!cart.length) { alert('購物車為空'); return; }
+        const subtotal = cart.reduce((a,i)=>a+i.price*i.quantity,0);
+        const discount = isMember ? subtotal * memberDiscountRate : 0;
+        const usePoints = Number(document.getElementById('usePoints')?.value || 0);
+        const pointsToCash = Number({{ points_to_cash }});
+        const pointsDiscount = isMember && pointsRedemptionEnabled && usePoints > 0 ? Math.floor(usePoints / pointsToCash) : 0;
+        const final = Math.max(0, subtotal - discount - pointsDiscount);
+        const preview = document.getElementById('preview-items');
+        preview.innerHTML = '<ul class="list-group">' + cart.map(item => `<li class="list-group-item bg-dark text-white">${item.name} x${item.quantity} - $${(item.price*item.quantity).toFixed(2)}</li>`).join('') + '</ul>';
+        document.getElementById('preview-subtotal').innerText = subtotal.toFixed(2);
+        document.getElementById('preview-discount').innerText = (discount + pointsDiscount).toFixed(2);
+        document.getElementById('preview-final').innerText = final.toFixed(2);
+        document.getElementById('preview-note').innerText = isMember ? `會員折扣 10% 已套用，點數折抵 $${pointsDiscount}` : '非會員無折扣';
+        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        modal.show();
+    }
+
+    function confirmCheckout() {
+        const subtotal = cart.reduce((a,i)=>a+i.price*i.quantity,0);
+        const discount = isMember ? subtotal * memberDiscountRate : 0;
+        const usePoints = Number(document.getElementById('usePoints')?.value || 0);
+        const pointsToCash = Number({{ points_to_cash }});
+        const pointsDiscount = isMember && pointsRedemptionEnabled && usePoints > 0 ? Math.floor(usePoints / pointsToCash) : 0;
+        const final = Math.max(0, subtotal - discount - pointsDiscount);
+        fetch('/submit_order', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({items: cart, total_price: Math.round(final), payment_method: document.getElementById('paymentMethod').value, use_points: usePoints})})
+            .then(r => r.json())
+            .then(data => { alert(data.message); cart=[]; updateCartUI(); window.location.reload(); })
+            .catch(e => { console.error(e); alert('結帳錯誤，請稍後再試'); });
+    }
+
+    function sortMenu(mode) {
+        const container = document.getElementById('menuList');
+        const rows = [...container.querySelectorAll('.menu-row')];
+        rows.sort((a,b)=>{
+            if (mode === 'recommended') return Number(b.dataset.recommended) - Number(a.dataset.recommended);
+            if (mode === 'new') return Number(b.dataset.new) - Number(a.dataset.new);
+            if (mode === 'price_asc') return Number(a.dataset.price) - Number(b.dataset.price);
+            if (mode === 'price_desc') return Number(b.dataset.price) - Number(a.dataset.price);
+            return 0;
+        });
+        rows.forEach(r => container.appendChild(r));
+    }
+
+    function filterMenu() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const max = Number(document.getElementById('maxPrice').value) || Number.POSITIVE_INFINITY;
+        const cat = document.getElementById('categoryFilter').value;
+        document.querySelectorAll('#menuList .menu-row').forEach(row => {
+            const text = row.innerText.toLowerCase();
+            const price = Number(row.dataset.price || 0);
+            const rowCat = row.dataset.category || '未分類';
+            const categoryMatch = cat === 'all' || rowCat === cat;
+            const show = text.includes(q) && price <= max && categoryMatch;
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('maxPrice').value = '';
+        document.getElementById('categoryFilter').value = 'all';
+        filterMenu();
+    }
+
+    updateCartUI();
+</script>
+
+{% else %}
+
+<div class="container py-5">
+    <div class="hero text-white text-center p-4 mb-4" style="background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(10,10,10,0.9)), url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80') center/cover; border-radius: 14px; ">
+        <h1 class="display-5">歡迎使用自助點餐系統</h1>
+        <p class="lead">可先註冊加入會員，之後可直接人臉快速登入。</p>
+        <div class="d-flex justify-content-center gap-2 mt-3">
+            <a class="btn btn-register btn-lg" href="/register">加入會員</a>
+            <a class="btn btn-login btn-lg" href="/face_login">人臉快速登入</a>
+        </div>
+    </div>
+    <div class="text-center text-muted">點擊後台管理可進入店家管理</div>
+    <div class="text-center mt-3"><a class="text-white" href="/admin">後台管理</a></div>
+</div>
+
+{% endif %}
+
+</body>
+</html>
