@@ -9,7 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps
 
-app = Flask(__name__)
+# 修正 1：移除重複的 app 初始化
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(BASE_DIR, 'templates')
 app = Flask(__name__, template_folder=template_dir)
@@ -44,6 +44,9 @@ class MenuItem(db.Model):
     description = db.Column(db.String(200))
     image_path = db.Column(db.String(200), nullable=True)
     modifiers = db.Column(db.String(100), default='none')
+    # 修正 2：補上前端需要的熱門與新品欄位
+    is_recommended = db.Column(db.Boolean, default=False)
+    is_new = db.Column(db.Boolean, default=False)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -72,17 +75,27 @@ class OrderItem(db.Model):
 with app.app_context():
     db.create_all()
 
-# 💡 新增：圖片預處理函式（修正手機拍照旋轉問題與解析度過大問題）
+    # SQLite 不會自動更新現有資料表欄位，若 menu_item 表缺少新欄位就補上
+    if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite:///'):
+        conn = db.engine.raw_connection()
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(menu_item)")
+        existing_columns = [row[1] for row in cursor.fetchall()]
+        if 'is_recommended' not in existing_columns:
+            cursor.execute("ALTER TABLE menu_item ADD COLUMN is_recommended BOOLEAN DEFAULT 0")
+        if 'is_new' not in existing_columns:
+            cursor.execute("ALTER TABLE menu_item ADD COLUMN is_new BOOLEAN DEFAULT 0")
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+# --- 圖片處理與人臉辨識函式 ---
 def save_and_fix_image(file_storage, save_path):
-    """將上傳的圖片轉正、限制最大解析度後存檔"""
     try:
         img = Image.open(file_storage)
-        img = ImageOps.exif_transpose(img)  # 根據 EXIF 自動旋轉至正確角度
-        
+        img = ImageOps.exif_transpose(img)
         if img.mode != "RGB":
             img = img.convert("RGB")
-            
-        # 限制最大邊長為 1024px，提升 YuNet 偵測速度與準確率
         img.thumbnail((1024, 1024))
         img.save(save_path, "JPEG", quality=90)
         return True
@@ -94,15 +107,11 @@ def get_face_feature(image_path):
     img = cv2.imread(image_path)
     if img is None: 
         return None
-    
-    # 設置動態尺寸供 YuNet 偵測
     h, w, _ = img.shape
     detector.setInputSize((w, h))
-    
     _, faces = detector.detect(img)
     if faces is None or len(faces) == 0: 
         return None
-        
     face_align = recognizer.alignCrop(img, faces[0])
     return recognizer.feature(face_align)
 
@@ -133,13 +142,11 @@ def update_order_status(order_id):
         
     data = request.json
     new_status = data.get('status')
-    
     order = Order.query.get_or_404(order_id)
     if new_status:
         order.status = new_status
         db.session.commit()
         return jsonify({'message': '狀態更新成功', 'status': new_status})
-        
     return jsonify({'error': '無效的狀態'}), 400
 
 @app.route('/admin_logout')
@@ -158,6 +165,10 @@ def add_item():
     desc = request.form.get('description')
     image = request.files.get('image')
     
+    # 修正 3：擷取前端送來的熱門與新品開關狀態
+    is_recommended = request.form.get('is_recommended') == 'on'
+    is_new = request.form.get('is_new') == 'on'
+    
     if name and price:
         image_filename = ""
         if image and image.filename != '':
@@ -166,7 +177,16 @@ def add_item():
             filepath = os.path.join(app.config['UPLOAD_FOLDER_MENU'], image_filename)
             image.save(filepath)
             
-        new_item = MenuItem(name=name, category=category, modifiers=modifiers, price=int(price), description=desc, image_path=image_filename)
+        new_item = MenuItem(
+            name=name, 
+            category=category, 
+            modifiers=modifiers, 
+            price=int(price), 
+            description=desc, 
+            image_path=image_filename,
+            is_recommended=is_recommended,  # 儲存至資料庫
+            is_new=is_new                   # 儲存至資料庫
+        )
         db.session.add(new_item)
         db.session.commit()
         
@@ -182,7 +202,7 @@ def delete_item(id):
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
-        except Exception as e:
+        except Exception:
             pass
             
     db.session.delete(item_to_delete)
@@ -197,7 +217,7 @@ def delete_user(id):
     try:
         if os.path.exists(user_to_delete.photo_path):
             os.remove(user_to_delete.photo_path)
-    except Exception as e:
+    except Exception:
         pass
         
     db.session.delete(user_to_delete)
@@ -207,14 +227,27 @@ def delete_user(id):
 @app.route('/')
 def customer_index():
     user_name = session.get('user_name')
+    is_member = False
+    
     if user_name:
         user = User.query.filter_by(name=user_name).first()
         if not user:
             session.pop('user_name', None)
+        else:
+            is_member = True
 
     items = MenuItem.query.all()
     categories = sorted({item.category or '未分類' for item in items})
-    return render_template('customer.html', items=items, categories=categories)
+    
+    # 修正 4：補齊前端會員與點數顯示所需要的防呆變數
+    return render_template('customer.html', 
+                           items=items, 
+                           categories=categories,
+                           is_member=is_member,
+                           user_points=0,
+                           points_to_cash=10,
+                           points_redemption_enabled=False,
+                           points_earning_enabled=False)
 
 @app.route('/logout')
 def logout():
@@ -275,7 +308,6 @@ def my_orders():
 
     try:
         orders = Order.query.filter_by(table_number=user_name).order_by(Order.created_at.desc()).all()
-
         result = []
         for o in orders:
             items_detail = []
@@ -361,9 +393,7 @@ def register():
             
             if photo and photo.filename != '':
                 source_path = os.path.join(app.config['UPLOAD_FOLDER_MEMBER'], f"temp_upload_{phone}.jpg")
-                # 💡 使用 PIL 進行轉正與縮放後存檔
                 save_and_fix_image(photo, source_path)
-                
             elif captured_photo:
                 source_path = os.path.join(app.config['UPLOAD_FOLDER_MEMBER'], captured_photo)
                 if not os.path.exists(source_path):
@@ -371,7 +401,6 @@ def register():
             else:
                 return "<h1>請上傳照片或使用相機拍攝！</h1><a href='/register'>返回</a>", 400
 
-            # 進行人臉偵測與特徵萃取
             feature = get_face_feature(source_path)
             if feature is None:
                 if os.path.exists(source_path):
