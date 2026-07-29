@@ -11,6 +11,8 @@ from werkzeug.utils import secure_filename
 import io
 import csv
 
+
+
 app = Flask(__name__)
 app.secret_key = 'kiosk_secret_key_123'
 
