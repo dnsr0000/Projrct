@@ -1,291 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="utf-8">
-    <title>店家管理系統 (Admin Dashboard)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店家後台管理系統 - Kiosk</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: "Microsoft JhengHei", sans-serif; }
+        .admin-login-card { max-width: 400px; margin: 100px auto; border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .order-card { border-left: 5px solid #0d6efd; transition: transform 0.2s; }
+        .order-card:hover { transform: translateY(-3px); }
+        .order-card.Pending { border-left-color: #ffc107; }
+        .order-card.Completed { border-left-color: #198754; }
+        .order-card.Cancelled { border-left-color: #6c757d; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
 {% if not session.get('admin_logged_in') %}
 
-    <div class="d-flex align-items-center justify-content-center bg-dark" style="height: 100vh;">
-        <div class="card bg-secondary text-white shadow-lg" style="width: 350px;">
-            <div class="card-body p-4">
-                <h3 class="card-title text-center mb-4"><i class="bi bi-shield-lock"></i> 後台管理登入</h3>
-                <form action="/admin" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">帳號 (Username)</label>
-                        <input type="text" class="form-control" name="username" placeholder="輸入 1234" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label">密碼 (Password)</label>
-                        <input type="password" class="form-control" name="password" placeholder="輸入 1234" required>
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100 fw-bold">登入 (Login)</button>
-                </form>
-                <div class="text-center mt-4">
-                    <a href="/" class="text-light text-decoration-none"><i class="bi bi-house-door"></i> 返回客用點餐首頁</a>
+    <!-- 未登入：店家登入表單 -->
+    <div class="container">
+        <div class="card admin-login-card p-4">
+            <div class="text-center mb-4">
+                <i class="bi bi-shield-lock-fill text-primary display-4"></i>
+                <h3 class="fw-bold mt-2">店家後台管理登入</h3>
+            </div>
+            <form action="/admin" method="POST">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">帳號 (Username)</label>
+                    <input type="text" class="form-control" name="username" placeholder="預設: 1234" required>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">密碼 (Password)</label>
+                    <input type="password" class="form-control" name="password" placeholder="預設: 1234" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold fs-5">登入系統</button>
+            </form>
+            <div class="text-center mt-3">
+                <a href="/" class="text-secondary text-decoration-none"><i class="bi bi-arrow-left"></i> 返回前台點餐</a>
             </div>
         </div>
     </div>
 
 {% else %}
 
-    <nav class="navbar navbar-dark bg-dark mb-4 shadow">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1"><i class="bi bi-gear-fill"></i> 店家後台管理系統</span>
-            <a href="/admin_logout" class="btn btn-outline-light btn-sm"><i class="bi bi-box-arrow-right"></i> 登出 (Logout)</a>
+    <!-- 已登入：店家後台管理看板 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="/admin"><i class="bi bi-shop"></i> 店家後台管理系統</a>
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3"><i class="bi bi-person-circle"></i> 管理員已登入</span>
+                <a href="/" class="btn btn-outline-light btn-sm me-2" target="_blank"><i class="bi bi-display"></i> 前台畫面</a>
+                <a href="/admin_logout" class="btn btn-danger btn-sm"><i class="bi bi-box-arrow-right"></i> 登出</a>
+            </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4">
-        <div class="card mb-3 shadow-sm border-0">
-            <div class="card-body bg-light">
-                <h5 class="card-title">會員點數設定</h5>
-                <form action="/admin/update_settings" method="POST" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="points_redemption_enabled" id="points_redemption_enabled" {% if points_redemption_enabled == '1' %}checked{% endif %}>
-                            <label class="form-check-label" for="points_redemption_enabled">啟用點數折抵</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3"><label class="form-label small">幾點折抵 1 元</label><input class="form-control" type="number" name="points_to_cash_ratio" min="1" value="{{ points_to_cash }}"></div>
-                    <div class="col-md-3">
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" type="checkbox" name="points_earning_enabled" id="points_earning_enabled" {% if points_earning_enabled == '1' %}checked{% endif %}>
-                            <label class="form-check-label small" for="points_earning_enabled">啟用點數獲得</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3"><label class="form-label small">每 10 元獲得點數</label><input class="form-control" type="number" name="points_earning_rate" min="0" value="{{ points_earning_rate }}"></div>
-                    <div class="col-md-2"><button class="btn btn-primary btn-sm w-100">儲存設定</button></div>
-                </form>
-                <div class="text-muted small mt-2">可分別設定折抵開關與賺點開關。折抵關閉後不扣點；獲點關閉後不累點。</div>
-            </div>
-        </div>
-        <div class="row">
+    <div class="container-fluid p-4">
+        <!-- 頁籤選單 -->
+        <ul class="nav nav-pills mb-4 bg-white p-2 rounded shadow-sm" id="adminTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel" type="button" role="tab">
+                    <i class="bi bi-card-checklist"></i> 實時訂單管理看板
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="menu-tab" data-bs-toggle="tab" data-bs-target="#menu-panel" type="button" role="tab">
+                    <i class="bi bi-egg-fried"></i> 菜單品項管理
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-panel" type="button" role="tab">
+                    <i class="bi bi-people-fill"></i> 會員名冊管理
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="adminTabContent">
             
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-card-list"></i> 菜單管理 (Menu Items)</h5>
-                    </div>
-<div class="card-body">
-                        <form action="/admin/add" method="POST" enctype="multipart/form-data" class="row g-2 mb-4 bg-light p-3 rounded">
-                            <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" name="name" placeholder="餐點名稱" required>
-                            </div>
-                            <div class="col-md-2">
-                                <input type="number" class="form-control form-control-sm" name="price" placeholder="價格" required>
-                            </div>
-                            <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" name="category" placeholder="分類" value="主餐">
-                            </div>
-                            <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" name="description" placeholder="描述(選填)">
-                            </div>
-                            <div class="col-md-2">
-                                <input type="file" class="form-control form-control-sm" name="image" accept="image/*">
-                            </div>
-                            <div class="col-md-1 d-flex align-items-center">
-                                <div class="form-check form-switch mt-2">
-                                    <input class="form-check-input" type="checkbox" id="recommended" name="recommended">
-                                    <label class="form-check-label small" for="recommended">推薦</label>
+            <!-- 1. 實時訂單看板 Panel -->
+            <div class="tab-pane fade show active" id="orders-panel" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold m-0"><i class="bi bi-kanban"></i> 實時訂單看板 (Live Order Manager)</h4>
+                    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> 整理更新</button>
+                </div>
+                
+                <div class="row g-3">
+                    {% for order in orders %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card order-card shadow-sm {{ order.status }}">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                <span class="fw-bold fs-5 text-primary">#{{ order.id }}</span>
+                                <div>
+                                    <span class="badge bg-info text-dark me-1">{{ order.order_type }}</span>
+                                    <span class="badge bg-secondary me-1">{{ order.payment_method }}</span>
                                 </div>
                             </div>
-                            <div class="col-md-1">
-                                <button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> 新增</button>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between text-muted small mb-2">
+                                    <span><i class="bi bi-person"></i> {{ order.table_number }}</span>
+                                    <span><i class="bi bi-clock"></i> {{ order.created_at.strftime('%m-%d %H:%M') if order.created_at else '' }}</span>
+                                </div>
+                                
+                                <hr class="my-2">
+                                
+                                <!-- 訂單餐點細節列表 -->
+                                <table class="table table-sm table-borderless mb-2">
+                                    <tbody>
+                                        {% for item in order.items %}
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">{{ item.item_name }}</span>
+                                                {% if item.customization %}
+                                                    <br><small class="text-danger fw-bold"><i class="bi bi-tag-fill"></i> {{ item.customization }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center fw-bold">x {{ item.quantity }}</td>
+                                            <td class="text-end">${{ item.price * item.quantity }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+
+                                <hr class="my-2">
+
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <h5 class="fw-bold text-danger m-0">${{ order.total_price }}</h5>
+                                    <div>
+                                        <select class="form-select form-select-sm border-2 fw-bold" 
+                                                onchange="changeOrderStatus('{{ order.id }}', this.value)"
+                                                style="width: 140px; background-color: {% if order.status == 'Pending' %}#fff3cd{% elif order.status == 'Completed' %}#d1e7dd{% else %}#e2e3e5{% endif %};">
+                                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>⏳ 製作中 (Pending)</option>
+                                            <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>✅ 已出餐 (Completed)</option>
+                                            <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>❌ 已取消 (Cancelled)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-5 text-muted">
+                        <h5>目前尚無任何訂單紀錄！</h5>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 2. 菜單管理 Panel -->
+            <div class="tab-pane fade" id="menu-panel" role="tabpanel">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white fw-bold"><i class="bi bi-plus-circle"></i> 新增菜單品項</div>
+                    <div class="card-body p-3">
+                        <form action="/admin/add" method="POST" enctype="multipart/form-data" class="row g-2">
+                            <div class="col-md-2">
+                                <input type="text" class="form-control" name="name" placeholder="餐點名稱" required>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" name="category">
+                                    <option value="主餐">主餐</option>
+                                    <option value="飲料">飲料</option>
+                                    <option value="點心">點心</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" name="modifiers">
+                                    <option value="none">無客製化</option>
+                                    <option value="ice_sugar">飲料類 (冰塊/甜度)</option>
+                                    <option value="spicy">辣度選擇 (不辣~大辣)</option>
+                                    <option value="addons">主餐加料 (加蛋/加起司)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" name="price" placeholder="單價 ($)" required>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="file" class="form-control" name="image" accept="image/*">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-plus-lg"></i> 新增品項</button>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <input type="text" class="form-control" name="description" placeholder="餐點簡介 (可填寫)">
                             </div>
                         </form>
+                    </div>
+                </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-hover table-sm align-middle text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>照片</th>
-                                        <th>名稱</th>
-                                        <th>價格</th>
-                                        <th>描述</th>
-                                        <th>分類</th>
-                                        <th>推薦</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in items %}
-                                    <tr>
-                                        <td>
-                                            {% if item.image_path %}
-                                                <img src="{{ url_for('static', filename='menu/' + item.image_path) }}" alt="餐點照片" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
-                                            {% else %}
-                                                <span class="badge bg-secondary">無圖片</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="fw-bold">{{ item.name }}</td>
-                                        <td class="text-danger fw-bold">${{ item.price }}</td>
-                                        <td class="text-muted small">{{ item.description }}</td>
-                                        <td>{{ item.category or '未分類' }}</td>
-                                        <td>
-                                            {% if item.is_recommended %}<span class="badge bg-success">熱門</span>{% else %}<span class="badge bg-secondary">-</span>{% endif %}
-                                            {% if item.is_new %}<span class="badge bg-info">新品</span>{% endif %}
-                                        </td>
-                                        <td>
-                                            <a href="/admin/edit/{{ item.id }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> 編輯</a>
-                                            <a href="/admin/delete/{{ item.id }}" class="btn btn-danger btn-sm" onclick="return confirm('確定要刪除這道菜嗎？');"><i class="bi bi-trash"></i> 刪除</a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white fw-bold"><i class="bi bi-list-stars"></i> 現有菜單列表</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>圖片</th>
+                                    <th>名稱</th>
+                                    <th>分類</th>
+                                    <th>客製化類型</th>
+                                    <th>單價</th>
+                                    <th>簡介</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.id }}</td>
+                                    <td>
+                                        {% if item.image_path %}
+                                            <img src="{{ url_for('static', filename='menu/' + item.image_path) }}" width="45" height="45" class="rounded object-fit-cover">
+                                        {% else %}
+                                            <span class="text-muted">無圖片</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold">{{ item.name }}</td>
+                                    <td><span class="badge bg-secondary">{{ item.category }}</span></td>
+                                    <td><span class="badge bg-info text-dark">{{ item.modifiers }}</span></td>
+                                    <td class="text-danger fw-bold">${{ item.price }}</td>
+                                    <td><small class="text-muted">{{ item.description }}</small></td>
+                                    <td>
+                                        <a href="/admin/delete/{{ item.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('確定要刪除這道餐點嗎？')"><i class="bi bi-trash"></i> 刪除</a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="8" class="text-center text-muted py-4">尚無餐點品項</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-people-fill"></i> 會員管理 (Members)</h5>
-                    </div>
-                    <!-- 會員列表區塊：可刪除會員並移除照片 -->
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>會員號</th>
-                                        <th>照片</th>
-                                        <th>姓名</th>
-                                        <th>電話</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for user in users %}
-                                    <tr>
-                                        <td><span class="badge bg-secondary fs-6"># {{ user.id }}</span></td>
-                                        <td>
-                                            {% set filename = user.photo_path.split('\\')[-1] if '\\' in user.photo_path else user.photo_path.split('/')[-1] %}
-                                            <img src="{{ url_for('static', filename='member/' + filename) }}" alt="照片" style="width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 2px solid #ccc;">
-                                        </td>
-                                        <td class="fw-bold">{{ user.name }}</td>
-                                        <td>{{ user.phone }}</td>
-                                        <td>
-                                            <a href="/admin/delete_user/{{ user.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('確定要銷毀此會員嗎？此操作將刪除實體照片，並釋放該會員號給下一位註冊者。');"><i class="bi bi-person-x"></i> 銷毀並釋放</a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-receipt"></i> 最近訂單 (Recent Orders)</h5>
-                        <span class="badge bg-light text-dark">最新 20 筆</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3 p-3 rounded bg-white text-dark">
-                            <form class="row g-2" method="GET" action="/admin">
-                                <div class="col-md-2"><input class="form-control form-control-sm" name="search" placeholder="訂單ID/會員" value="{{ search_term or '' }}"></div>
-                                <div class="col-md-2">
-                                    <select name="status" class="form-select form-select-sm">
-                                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>狀態: 全部</option>
-                                        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
-                                        <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
-                                        <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="payment_method" class="form-select form-select-sm">
-                                        <option value="all" {% if payment_filter == 'all' %}selected{% endif %}>付款: 全部</option>
-                                        <option value="Cash" {% if payment_filter == 'Cash' %}selected{% endif %}>現金</option>
-                                        <option value="Credit Card" {% if payment_filter == 'Credit Card' %}selected{% endif %}>信用卡</option>
-                                        <option value="Line Pay" {% if payment_filter == 'Line Pay' %}selected{% endif %}>LinePay</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2"><input class="form-control form-control-sm" type="date" name="start_date" value="{{ start_date or '' }}"></div>
-                                <div class="col-md-2"><input class="form-control form-control-sm" type="date" name="end_date" value="{{ end_date or '' }}"></div>
-                                <div class="col-md-2 d-grid"><button class="btn btn-primary btn-sm">搜尋</button></div>
-                            </form>
-                            <div class="mt-2 text-muted small">搜尋後將顯示符合條件的訂單與報表。若不輸入日期將顯示全部。</div>
-                        </div>
-                        <div class="row mb-2">
-                            <div class="col-md-3"><div class="p-2 bg-light rounded"><div class="small text-muted">查詢訂單</div><div class="fs-5 fw-bold">{{ orders|length }}</div></div></div>
-                            <div class="col-md-3"><div class="p-2 bg-light rounded"><div class="small text-muted">期間營收</div><div class="fs-5 fw-bold text-danger">${{ total_revenue or 0 }}</div></div></div>
-                            <div class="col-md-3"><div class="p-2 bg-light rounded"><div class="small text-muted">訂單數量</div><div class="fs-5 fw-bold">{{ total_orders or 0 }}</div></div></div>
-                            <div class="col-md-3"><div class="p-2 bg-light rounded"><div class="small text-muted">熱門品項</div><div class="fs-6 fw-bold">{% for item in top_items %}{{ item[0] }}({{ item[1] }}) {% if not loop.last %}| {% endif %}{% endfor %}</div></div></div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h6 class="mb-0">共有 {{ orders|length }} 筆訂單</h6>
-                                <small class="text-muted">點擊「查看明細」展開菜品</small>
-                            </div>
-                            <a href="/admin/export_orders" class="btn btn-sm btn-outline-light">📄 匯出訂單 CSV</a>
-                        </div>
-                        {% if orders %}
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>訂單</th>
-                                        <th>會員 / 桌號</th>
-                                        <th>總價</th>
-                                        <th>付款方式</th>
-                                        <th>狀態</th>
-                                        <th>時間</th>
-                                        <th>詳情</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for order in orders %}
-                                    <tr>
-                                        <td class="fw-bold">{{ order.id }}</td>
-                                        <td>{{ order.table_number or '訪客' }}</td>
-                                        <td class="text-danger fw-bold">${{ order.total_price }}</td>
-                                        <td>{{ order.payment_method }}</td>
-                                        <td>
-                                            <form action="/admin/update_order_status/{{ order.id }}" method="POST" class="d-flex align-items-center gap-1">
-                                                <select name="status" class="form-select form-select-sm">
-                                                    <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
-                                                    <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>Completed</option>
-                                                    <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                                                </select>
-                                                <button type="submit" class="btn btn-sm btn-primary">更新</button>
-                                            </form>
-                                        </td>
-                                        <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                                        <td>
-                                            <a href="/admin/edit_order/{{ order.id }}" class="btn btn-sm btn-warning">編輯訂單</a>
-                                            <button class="btn btn-sm btn-info" type="button" onclick="toggleDetails({{ order.id }})">查看明細</button>
-                                        </td>
-                                    </tr>
-                                    <tr id="orderDetail{{ order.id }}" style="display:none;">
-                                        <td colspan="7" class="text-start">
-                                            <!-- 訂單明細區塊，從 toggleDetails 控制顯示 -->
-                                            <div class="bg-light p-2 rounded">
-                                                <strong>訂單明細</strong>
-                                                <ul class="list-unstyled mb-0">
-                                                    {% for item in order.items %}
-                                                    <li>{{ item.item_name }} x{{ item.quantity }} - ${{ item.price }} (共 ${{ item.price * item.quantity }})</li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <p class="text-muted">目前尚無訂單</p>
-                        {% endif %}
+            <!-- 3. 會員管理 Panel -->
+            <div class="tab-pane fade" id="users-panel" role="tabpanel">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white fw-bold"><i class="bi bi-people"></i> 已註冊會員名冊</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>會員照片</th>
+                                    <th>姓名</th>
+                                    <th>電話號碼</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>
+                                        <img src="{{ url_for('static', filename='member/' + user.photo_path.split('\\')[-1].split('/')[-1]) }}" width="50" height="50" class="rounded-circle object-fit-cover">
+                                    </td>
+                                    <td class="fw-bold">{{ user.name }}</td>
+                                    <td>{{ user.phone }}</td>
+                                    <td>
+                                        <a href="/admin/delete_user/{{ user.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('確定要刪除該會員嗎？')"><i class="bi bi-trash"></i> 刪除會員</a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-4">尚無註冊會員</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -293,27 +274,31 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 即時更新訂單狀態 (API)
+        function changeOrderStatus(orderId, newStatus) {
+            fetch(`/admin/update_order_status/${orderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.message) {
+                    location.reload(); // 重新整理以反映最新的卡片樣式
+                } else {
+                    alert('更新失敗：' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('網路錯誤，請稍後再試！');
+            });
+        }
+    </script>
+
 {% endif %}
 
-<script>
-  function toggleDetails(id) {
-    const el = document.getElementById('orderDetail' + id);
-    if (!el) return;
-    el.style.display = el.style.display === 'none' ? '' : 'none';
-  }
-
-  window.addEventListener('DOMContentLoaded', () => {
-    // 若網址帶 highlight_order，則自動展開該訂單明細並滾動
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('highlight_order');
-    if (id) {
-      const detail = document.getElementById('orderDetail' + id);
-      if (detail) {
-        detail.style.display = '';
-        detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  });
-</script>
 </body>
 </html>

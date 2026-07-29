@@ -1,28 +1,22 @@
-﻿# Python
+# 忽略資料庫檔案
+instance/
+menu.db
+*.db
+
+# 忽略使用者上傳的靜態檔案 (保留目錄但不上傳內容)
+static/uploads/*
+
+# 排除特定格式的圖片 (選用)
+*.jpg
+*.jpeg
+*.png
+
+# Python 編譯暫存檔
 __pycache__/
 *.py[cod]
-*.class
-*.egg-info/
-*.egg
+*$py.class
+
+# 虛擬環境 (如果有使用的話)
 venv/
 env/
-.local/
-# Flask
-instance/
-*.db
-menu.db
-# Static uploads and generated media
-static/uploads/
-static/menu/
-static/member/
-# OS
-.DS_Store
-Thumbs.db
-# IDE
-.vscode/
-.idea/
-# Logs
-*.log
-# Editor
-*.swp
-*~
+.env

@@ -38,10 +38,13 @@
                                     <label class="form-label">電話</label>
                                     <input class="form-control" type="text" name="phone" value="{{ phone }}" required>
                                 </div>
+                                
                                 <div class="mb-3">
-                                    <label class="form-label">上傳照片</label>
-                                    <input class="form-control" type="file" name="photo" accept="image/*">
+                                    <label class="form-label">拍攝或上傳照片</label>
+                                    <!-- 手機點擊這裡會直接跳出手機相機或相簿 -->
+                                    <input class="form-control" type="file" name="photo" accept="image/*" capture="user" required>
                                 </div>
+
                                 <input type="hidden" name="captured_photo" value="{{ captured_photo }}">
                                 {% if captured_photo %}
                                 <div class="alert alert-success p-2 mb-3">
@@ -51,9 +54,9 @@
                                     <img src="{{ url_for('static', filename='member/' + captured_photo) }}" class="img-fluid rounded" alt="人臉預覽">
                                 </div>
                                 {% endif %}
+
                                 <div class="d-grid gap-2 mb-2">
-                                    <button class="btn btn-brand" type="submit" name="action" value="webcam">📸 開啟相機自動拍攝</button>
-                                    <button class="btn btn-success" type="submit" name="action" value="register">💾 上傳照片並註冊</button>
+                                    <button class="btn btn-success" type="submit" name="action" value="register">💾 送出照片並註冊</button>
                                 </div>
                             </form>
                             <div class="text-center">
