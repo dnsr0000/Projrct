@@ -213,7 +213,8 @@ def customer_index():
             session.pop('user_name', None)
 
     items = MenuItem.query.all()
-    return render_template('customer.html', items=items)
+    categories = sorted({item.category or '未分類' for item in items})
+    return render_template('customer.html', items=items, categories=categories)
 
 @app.route('/logout')
 def logout():

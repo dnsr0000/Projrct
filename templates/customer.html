@@ -9,62 +9,435 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        .kiosk-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; border-radius: 10px; border: none; font-weight: bold; margin: 10px; }
-        .btn-register { background-color: #4CAF50; color: white; }
-        .btn-login { background-color: #2196F3; color: white; }
-        .kiosk-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #1a1814; color: white; }
+        :root {
+            --bg: #020305;
+            --bg-soft: #090b12;
+            --panel: rgba(255,255,255,0.05);
+            --panel-strong: rgba(255,255,255,0.12);
+            --text: #f3f5fb;
+            --text-muted: #8d96b0;
+            --gold: #f2c96c;
+            --gold-soft: rgba(242,201,108,0.14);
+            --accent: #f5d47d;
+            --accent-strong: #ffe58d;
+            --shadow: 0 35px 100px rgba(0,0,0,0.42);
+        }
+
+        html, body {
+            min-height: 100%;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: radial-gradient(circle at top left, rgba(242,201,108,0.08), transparent 18%),
+                        radial-gradient(circle at bottom right, rgba(255,255,255,0.03), transparent 18%),
+                        linear-gradient(180deg, #040506 0%, #050608 48%, #070a10 100%),
+                        url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80') center/cover;
+            background-blend-mode: overlay, overlay, normal;
+            color: var(--text);
+        }
+
+        body { overflow-x: hidden; }
+        a { color: inherit; text-decoration: none; }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            background: rgba(5,7,10,0.95);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(14px);
+        }
+
+        .header .container-fluid { max-width: 1200px; }
+        .logo h1 {
+            margin: 0;
+            letter-spacing: .24em;
+            text-transform: uppercase;
+            font-size: 1.95rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .badge-soft {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .7rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            color: var(--text);
+            font-weight: 600;
+            font-size: .95rem;
+        }
+
+        .btn-accent,
+        .btn-outline-light {
+            border-radius: 999px;
+            font-weight: 700;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease;
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, #f2c96c 0%, #f7d88a 100%);
+            color: #07080a;
+            border: 1px solid transparent;
+        }
+
+        .btn-accent:hover { transform: translateY(-1px); }
+
+        .btn-outline-light {
+            color: var(--gold);
+            border: 1px solid rgba(242,201,108,0.35);
+            background: rgba(255,255,255,0.04);
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .section-title {
+            text-align: center;
+            padding-top: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-title h2 {
+            font-size: clamp(2.8rem, 4vw, 4.2rem);
+            letter-spacing: .08em;
+            margin-bottom: .55rem;
+        }
+
+        .section-title p {
+            color: var(--gold);
+            font-size: 1.65rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .hero-panel {
+            max-width: 900px;
+            margin: 0 auto 2.5rem;
+            padding: 2.2rem 2rem;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(4,5,6,0.92), rgba(4,5,6,0.72)),
+                        url('https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1600&q=80') center/cover;
+            background-blend-mode: overlay;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.32);
+            backdrop-filter: blur(15px);
+        }
+
+        .hero-panel h3 {
+            margin-bottom: 1rem;
+            font-size: clamp(1.8rem, 3vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: .04em;
+        }
+
+        .hero-panel p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            line-height: 1.9;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-btn {
+            border-radius: 999px;
+            padding: 1rem 1.5rem;
+            min-width: 150px;
+            color: var(--text);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: .25s ease;
+        }
+
+        .filter-btn:hover { background: rgba(255,255,255,0.12); }
+        .filter-active { background: var(--gold); color: #030405 !important; border-color: var(--gold) !important; }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .menu-item-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+        }
+
+        .menu-item-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(242,201,108,0.28);
+            box-shadow: 0 45px 100px rgba(0,0,0,0.42);
+        }
+
+        .menu-item-card img {
+            width: 100%;
+            height: 260px;
+            object-fit: cover;
+        }
+
+        .menu-item-body {
+            flex: 1;
+            padding: 1.8rem 1.6rem 1.4rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .menu-item-body h5 {
+            margin-bottom: .75rem;
+            font-size: 1.45rem;
+            letter-spacing: .01em;
+        }
+
+        .menu-item-body p {
+            color: var(--text-muted);
+            flex: 1;
+            margin-bottom: 1.25rem;
+            line-height: 1.75;
+        }
+
+        .menu-item-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem;
+            margin-bottom: 1.35rem;
+        }
+
+        .menu-item-meta .badge,
+        .badge-price {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text);
+            border-radius: 999px;
+            padding: .55rem .9rem;
+            font-size: .9rem;
+        }
+
+        .menu-item-card .card-body {
+            padding: 1.8rem 1.6rem 1.4rem;
+        }
+
+        .add-to-cart-btn {
+            border-radius: 999px;
+            background: linear-gradient(135deg, #f7d18f 0%, #f2c86f 100%);
+            color: #040506;
+            border: none;
+            font-weight: 700;
+            padding: 1rem 1.2rem;
+            transition: transform .2s ease, background .2s ease;
+        }
+
+        .add-to-cart-btn:hover { transform: translateY(-1px); background: linear-gradient(135deg, #f9db9f 0%, #f5d27e 100%); }
+
+        .badge.bg-secondary {
+            background: rgba(255,255,255,0.08) !important;
+            color: var(--text) !important;
+        }
+
+        .badge.bg-info {
+            background: rgba(242,201,108,0.12) !important;
+            color: var(--text) !important;
+        }
+
+        .badge.bg-success {
+            background: rgba(72,187,120,0.16) !important;
+            color: #e7f8ec !important;
+        }
+
+        .badge.bg-primary {
+            background: rgba(66,153,225,0.12) !important;
+            color: #dbe8ff !important;
+        }
+
+        .badge-pending {
+            background: rgba(242,201,108,0.25);
+            color: #0d1117;
+            border: 1px solid rgba(242,201,108,0.4);
+        }
+
+        .badge-completed {
+            background: rgba(72,187,120,0.16);
+            color: #e7f8ec;
+            border: 1px solid rgba(72,187,120,0.28);
+        }
+
+        .badge-cancelled {
+            background: rgba(140,152,173,0.16);
+            color: #f0f4fb;
+            border: 1px solid rgba(140,152,173,0.24);
+        }
+
+        .order-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            box-shadow: 0 22px 65px rgba(0,0,0,0.2);
+            color: var(--text);
+        }
+
+        .order-card-header {
+            background: rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            color: var(--text);
+        }
+
+        .order-card-header .text-muted {
+            color: rgba(255,255,255,0.55) !important;
+        }
+
+        .hero-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 1rem;
+            background: radial-gradient(circle at top, rgba(242,201,108,0.06), transparent 25%),
+                        linear-gradient(180deg, rgba(4,5,6,0.95), rgba(4,5,6,0.95) 55%, transparent 100%);
+        }
+
+        .hero-panel {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2rem;
+            align-items: center;
+            max-width: 1180px;
+            width: 100%;
+            padding: 3rem;
+            border-radius: 32px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 45px 120px rgba(0,0,0,0.38);
+            backdrop-filter: blur(18px);
+        }
+
+        .hero-info h1 {
+            margin-bottom: 1.2rem;
+            font-size: clamp(3rem, 5vw, 4.5rem);
+            font-weight: 900;
+            letter-spacing: .12em;
+        }
+
+        .hero-info p {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            line-height: 1.85;
+            margin-bottom: 2rem;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .hero-visual {
+            min-height: 380px;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .hero-visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @media (max-width: 992px) {
+            .hero-panel { grid-template-columns: 1fr; padding: 2rem; }
+            .hero-page { padding: 2rem 1rem; }
+        }
+
+        .offcanvas {
+            background: rgba(5,8,12,0.96);
+        }
+
+        .offcanvas-header { border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .offcanvas-title { color: var(--text); }
+
+        .cart-summary {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 24px;
+            padding: 1.4rem;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .cart-item-info h6 { margin: 0; color: var(--gold); }
+        .cart-item-info small { color: var(--text-muted); }
+
+        .remove-btn { color: #f87979; background: transparent; border: none; }
+
+        .cart-summary label { color: var(--text-muted); }
+        .cart-summary .form-select,
+        .cart-summary .form-control { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: var(--text); }
+
+        .modal-content { border-radius: 24px; overflow: hidden; }
+        .modal-header { background: rgba(9,11,15,0.95); border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .modal-body { color: #111; }
+
+        .table-light th { background: rgba(255,255,255,0.92) !important; }
+        .table td, .table th { border-top: none; }
+
+        .empty-state h4 { color: rgba(243,245,251,0.65); }
+        .history-card { border-radius: 22px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
+
+        .form-control, .form-select { background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid rgba(255,255,255,0.08); }
+        .form-control:focus, .form-select:focus { border-color: rgba(242,201,108,0.6); box-shadow: 0 0 0 0.15rem rgba(242,201,108,0.14); background: rgba(255,255,255,0.12); }
     </style>
 </head>
 <body class="index-page">
 
 {% if session.get('user_name') %}
-
-    <style>
-        :root { --background-color: #1a1814; --default-color: #ffffff; --heading-color: #ffffff; --accent-color: #cda45e; }
-        body { color: var(--default-color); background-color: var(--background-color); font-family: "Roboto", sans-serif; }
-        a { color: var(--accent-color); text-decoration: none; transition: 0.3s; }
-        a:hover { color: color-mix(in srgb, var(--accent-color), transparent 25%); text-decoration: none; }
-        .header { background: rgba(12, 11, 9, 0.6); border-bottom: 1px solid rgba(12, 11, 9, 0.6); transition: all 0.5s; z-index: 997; padding: 15px 0; }
-        .header .logo h1 { font-size: 28px; margin: 0; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; color: var(--heading-color); }
-        .btn-book-a-table { font-weight: 600; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; display: inline-block; padding: 12px 30px; border-radius: 50px; transition: 0.3s; line-height: 1; color: var(--default-color); border: 2px solid var(--accent-color); }
-        .btn-book-a-table:hover { background: var(--accent-color); color: var(--default-color); }
-        .menu-item { margin-top: 50px; }
-        .menu-img { width: 70px; height: 70px; border-radius: 50%; float: left; border: 5px solid rgba(255, 255, 255, 0.2); object-fit: cover; }
-        .menu-content { margin-left: 85px; overflow: hidden; display: flex; justify-content: space-between; position: relative; }
-        .menu-content::after { content: "......................................................................"; position: absolute; left: 20px; right: 0; top: 0; z-index: 1; color: rgba(255, 255, 255, 0.2); }
-        .menu-content a { padding-right: 10px; background: var(--background-color); position: relative; z-index: 3; font-weight: 700; color: white; transition: 0.3s; }
-        .menu-content a:hover { color: var(--accent-color); }
-        .menu-content span { background: var(--background-color); position: relative; z-index: 3; padding: 0 10px; font-weight: 600; color: var(--accent-color); }
-        .menu-ingredients { margin-left: 85px; font-style: italic; font-size: 14px; color: rgba(255, 255, 255, 0.5); }
-        .add-to-cart-btn { margin-left: 85px; margin-top: 10px; padding: 5px 15px; font-size: 12px; border-radius: 20px; background-color: var(--accent-color); color: white; border: none; transition: 0.3s; }
-        .add-to-cart-btn:hover { background-color: #d9ba85; }
-        #cart-sidebar { background-color: #0c0b09; color: white; border-left: 1px solid var(--accent-color); }
-        .offcanvas-header { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .cart-item-info h6 { margin: 0; color: var(--accent-color); }
-        .quantity-btn { background: none; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 0 8px; border-radius: 4px; }
-        .remove-btn { color: #dc3545; background: none; border: none; padding: 0; margin-left: 10px; }
-        .filter-active { background-color: var(--accent-color) !important; color: white !important; border-color: var(--accent-color) !important; }
-    </style>
-
-    <header id="header" class="header fixed-top">
-        <div class="container-fluid container-xl d-flex align-items-center justify-content-between">
+    <header id="header" class="header">
+        <div class="container-fluid container-xl d-flex align-items-center justify-content-between py-3">
             <a href="/" class="logo d-flex align-items-center">
-                <h1 class="sitename">Restaurantly</h1>
+                <h1 class="sitename">線上點餐</h1>
             </a>
-<div>
-                <span style="color: white; margin-right: 15px; font-size: 18px;">您好，{{ session['user_name'] }}！</span>
-                
-                <!-- 新增：我的訂單歷史記錄按鈕 -->
-                <button class="btn btn-outline-warning me-2" type="button" onclick="showMyOrders()">
-                    <i class="bi bi-receipt"></i> 我的訂單
+            <div class="header-controls">
+                <span class="badge-soft">您好，{{ session['user_name'] }}！</span>
+                <button class="btn btn-outline-light" type="button" onclick="showMyOrders()">
+                    <i class="bi bi-receipt me-2"></i> 我的訂單
                 </button>
-
-                <button class="btn btn-outline-light position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cart-sidebar" style="border-color: var(--accent-color); color: var(--accent-color); margin-right: 15px;">
-                    <i class="bi bi-cart3"></i> 購物車
+                <button class="btn btn-outline-light position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cart-sidebar" style="border-color: rgba(242,201,108,0.45); color: var(--gold);">
+                    <i class="bi bi-cart3"></i>
+                    <span class="ms-2">購物車</span>
                     <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
                 </button>
-                <a class="btn-book-a-table" href="/logout">登出 / 取消點餐</a>
+                <a class="btn btn-accent" href="/logout">登出 / 取消點餐</a>
             </div>
         </div>
     </header>
@@ -73,34 +446,57 @@
         <section id="menu" class="menu section" style="padding-top: 100px;">
             <div class="container">
                 <div class="section-title text-center mb-4">
-                    <h2>Menu</h2>
-                    <p style="color: var(--accent-color); font-size: 36px; font-weight: 700;">Check Our Tasty Menu</p>
+                    <h2>點餐系統</h2>
+                    <p>Premium Dining, Fast Ordering</p>
                 </div>
 
-                <div class="text-center mb-5">
-                    <button class="btn btn-outline-light filter-btn filter-active" onclick="filterMenu('All', this)">全部</button>
-                    <button class="btn btn-outline-light filter-btn" onclick="filterMenu('主餐', this)">主餐</button>
-                    <button class="btn btn-outline-light filter-btn" onclick="filterMenu('飲料', this)">飲料</button>
-                    <button class="btn btn-outline-light filter-btn" onclick="filterMenu('點心', this)">點心</button>
+                <div class="hero-panel mx-auto mb-5">
+                    <h3>頂級線上自助點餐體驗</h3>
+                    <p>點選您喜愛的餐點，快速完成訂單，享受尊榮用餐流程。</p>
                 </div>
 
-                <div class="row gy-5" id="menu-container">
+                <div class="filter-bar">
+                    <button class="btn filter-btn filter-active" onclick="filterMenu('All', this)">全部</button>
+                    {% for category in categories %}
+                        <button class="btn filter-btn" onclick="filterMenu('{{ category }}', this)">{{ category }}</button>
+                    {% endfor %}
+                </div>
+
+                <div class="row gy-4" id="menu-container">
                     {% for item in items %}
-                    <div class="col-lg-6 menu-item-card" data-category="{{ item.category }}">
-                        {% if item.image_path %}
-                            <img src="{{ url_for('static', filename='menu/' + item.image_path) }}" class="menu-img" alt="{{ item.name }}">
-                        {% else %}
-                            <img src="https://dummyimage.com/70x70/cda45e/fff.png&text=Food" class="menu-img" alt="預設圖片">
-                        {% endif %}
-                        
-                        <div class="menu-content">
-                            <a href="#">{{ item.name }}</a><span>${{ item.price }}</span>
+                    <div class="col-lg-6" data-category="{{ item.category }}">
+                        <div class="card menu-item-card h-100">
+                            {% if item.image_path %}
+                                <img src="{{ url_for('static', filename='menu/' + item.image_path) }}" class="menu-img" alt="{{ item.name }}">
+                            {% else %}
+                                <img src="https://dummyimage.com/1200x720/cda45e/fff.png&text=Food" class="menu-img" alt="預設圖片">
+                            {% endif %}
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <h5 class="mb-2">{{ item.name }}</h5>
+                                        <p class="mb-2">{{ item.description or '這道餐點還沒有描述，請店家補上。' }}</p>
+                                    </div>
+                                    <span class="badge-price fs-6">${{ item.price }}</span>
+                                </div>
+                                <div class="menu-item-meta">
+                                    <span class="badge bg-secondary">{{ item.category }}</span>
+                                    <span class="badge bg-info text-dark">{{ '無客製化' if item.modifiers in ['none', None, ''] else item.modifiers }}</span>
+                                </div>
+                                <button class="btn add-to-cart-btn" type="button"
+                                    data-item-id="{{ item.id }}"
+                                    data-item-name="{{ item.name }}"
+                                    data-item-price="{{ item.price }}"
+                                    data-item-modifiers="{{ item.modifiers }}"
+                                    onclick="handleAddToCart(this)">
+                                    <i class="bi bi-cart-plus me-2"></i> 加入購物車
+                                </button>
+                            </div>
                         </div>
-                        <div class="menu-ingredients">{{ item.description }}</div>
-                        <button class="add-to-cart-btn" onclick="handleAddToCart('{{ item.id }}', '{{ item.name }}', {{ item.price }}, '{{ item.modifiers }}')">加入購物車</button></div>
+                    </div>
                     {% else %}
-                    <div class="col-12 text-center mt-5">
-                        <h4 style="color: rgba(255,255,255,0.5);">目前還沒有菜單，請店家到後台新增！</h4>
+                    <div class="col-12 text-center mt-5 empty-state">
+                        <h4>目前還沒有菜單，請店家到後台新增！</h4>
                     </div>
                     {% endfor %}
                 </div>
@@ -121,10 +517,7 @@
             <div class="cart-summary mt-auto pt-3 border-top border-secondary">
                 <div class="d-flex justify-content-between mb-3">
                     <h5 class="mb-0">總計:</h5>
-                    <h5 class="mb-0" style="color: var(--accent-color)">$<span id="cart-total">0.00</span></h5>
-                </div>
-                
-                <div class="mb-3">
+                        <h5 class="mb-0" style="color: var(--gold)">$<span id="cart-total">0.00</span></h5>
                     <label class="form-label text-white-50">用餐方式</label>
                     <select id="orderType" class="form-select bg-dark text-white border-secondary">
                         <option value="內用">內用 (Dine-in)</option>
@@ -140,7 +533,7 @@
                         <option value="Line Pay">Line Pay</option>
                     </select>
                 </div>
-                <button class="btn w-100 py-2 fw-bold text-dark" style="background-color: var(--accent-color)" onclick="checkout()">確認結帳 (Checkout)</button>
+                <button class="btn btn-accent w-100 py-2 fw-bold" onclick="checkout()">確認結帳 (Checkout)</button>
             </div>
         </div>
     </div>
@@ -156,7 +549,7 @@
                     <!-- 由 JS 動態生成選項 -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-warning w-100 fw-bold py-2" onclick="confirmAddToCartWithModifier()">確認加入購物車</button>
+                    <button type="button" class="btn btn-accent w-100 fw-bold py-2" onclick="confirmAddToCartWithModifier()">確認加入購物車</button>
                 </div>
             </div>
         </div>
@@ -176,7 +569,7 @@
                     <hr>
                     <div class="row mb-2">
                         <div class="col-6"><strong>顧客姓名：</strong> <span id="receipt-user"></span></div>
-                        <div class="col-6"><strong>用餐方式：</strong> <span id="receipt-type" class="badge bg-primary"></span></div>
+                        <div class="col-6"><strong>用餐方式：</strong> <span id="receipt-type" class="badge bg-info"></span></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-12"><strong>付款方式：</strong> <span id="receipt-payment"></span></div>
@@ -230,8 +623,13 @@
     }
 
     // 1. 點擊「加入購物車」按鈕入口
-    function handleAddToCart(id, name, price, modifiers) {
-        if (!modifiers || modifiers === 'none' || modifiers === 'None' || modifiers === 'undefined' || modifiers === '') {
+    function handleAddToCart(button) {
+        const id = button.dataset.itemId;
+        const name = button.dataset.itemName;
+        const price = parseFloat(button.dataset.itemPrice) || 0;
+        const modifiers = button.dataset.itemModifiers || '';
+
+        if (!modifiers || modifiers === 'none' || modifiers === 'None' || modifiers === 'undefined') {
             addToCart(id, name, price, '');
             return;
         }
@@ -499,23 +897,23 @@ function confirmAddToCartWithModifier() {
                 historyBody.innerHTML = orders.map(o => {
                     let statusBadge = '';
                     if (o.status === 'Pending') {
-                        statusBadge = '<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> 製作中</span>';
+                        statusBadge = '<span class="badge badge-pending"><i class="bi bi-hourglass-split"></i> 製作中</span>';
                     } else if (o.status === 'Completed') {
-                        statusBadge = '<span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> 請取餐 / 已完成</span>';
+                        statusBadge = '<span class="badge badge-completed"><i class="bi bi-check-circle-fill"></i> 請取餐 / 已完成</span>';
                     } else if (o.status === 'Cancelled') {
-                        statusBadge = '<span class="badge bg-secondary"><i class="bi bi-x-circle-fill"></i> 已取消</span>';
+                        statusBadge = '<span class="badge badge-cancelled"><i class="bi bi-x-circle-fill"></i> 已取消</span>';
                     } else {
                         statusBadge = `<span class="badge bg-info">${o.status}</span>`;
                     }
 
                     return `
-                        <div class="card mb-3 border-secondary shadow-sm text-dark">
-                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div class="order-card mb-3">
+                            <div class="order-card-header d-flex justify-content-between align-items-center p-3">
                                 <div>
                                     <span class="fw-bold text-success fs-5">訂單 #${o.order_id}</span>
                                     ${statusBadge}
                                     <span class="badge bg-primary ms-1">${o.order_type}</span>
-                                    <span class="badge bg-outline-dark border ms-1">${o.payment_method}</span>
+                                    <span class="badge bg-secondary border ms-1">${o.payment_method}</span>
                                 </div>
                                 <small class="text-muted">${o.created_at}</small>
                             </div>
@@ -578,16 +976,19 @@ function confirmAddToCartWithModifier() {
     </div>
 {% else %}
 
-    <div class="kiosk-container text-center">
-        <h1 style="font-size: 64px; margin-bottom: 20px;">歡迎光臨 Restaurantly</h1>
-        <p style="font-size: 24px; color: #aaa; margin-bottom: 50px;">請點擊下方按鈕開始點餐</p>
-        <div>
-            <a href="/register"><button class="kiosk-btn btn-register">還不是會員？加入會員</button></a>
-            <a href="/face_login"><button class="kiosk-btn btn-login"><i class="bi bi-person-bounding-box"></i> 人臉快速登入</button></a>
-        </div>
-        
-        <div style="margin-top: 50px;">
-            <a href="/admin" style="color: rgba(255,255,255,0.3); font-size: 14px; text-decoration: none;"><i class="bi bi-gear-fill"></i> 店家管理 (Admin)</a>
+    <div class="hero-page">
+        <div class="hero-panel">
+            <div class="hero-info">
+                <h1>線上點餐</h1>
+                <p>時空殺陣予我神力。</p>
+                <div class="hero-actions">
+                    <a href="/register" class="btn btn-accent btn-lg">加入會員</a>
+                    <a href="/face_login" class="btn btn-outline-light btn-lg">人臉快速登入</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80" alt="Premium dining">
+            </div>
         </div>
     </div>
 
